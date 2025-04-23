@@ -1,0 +1,30 @@
+plugins {
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
+    id 'java'
+}
+
+group = 'org.bodik'
+version = '1.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.github.kwhat:jnativehook:2.2.2'
+}
+
+shadowJar {
+    archiveFileName = "${rootProject.name}-${version}.jar"
+    manifest {
+        attributes 'Main-Class': 'org.bodik.AntiAFKApp'
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(JavaExec) {
+    systemProperty 'file.encoding', 'UTF-8'
+}
