@@ -4,23 +4,23 @@ import com.github.kwhat.jnativehook.GlobalScreen;
 
 import java.awt.*;
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AntiAFKApp {
 
     private static final long MOVEMENT_INTERVAL = 10000; // Move the mouse every 10 seconds after inactivity (in ms)
-        private static final int RANDOM_END_DAY_TIME = 10;
-//    private static final int RANDOM_END_DAY_TIME = 1;
-        private static final Duration IDLE_THRESHOLD = Duration.ofMinutes(5);
-//    private static final Duration IDLE_THRESHOLD = Duration.ofSeconds(5);
+    private static final int RANDOM_END_DAY_TIME = 10;
+    //    private static final int RANDOM_END_DAY_TIME = 1;
+    private static final Duration IDLE_THRESHOLD = Duration.ofMinutes(5);
+    //    private static final Duration IDLE_THRESHOLD = Duration.ofSeconds(5);
     private static final LocalTime START_WORK = LocalTime.of(9, 0);
     private static final LocalTime END_WORK = LocalTime.of(18, 0);
     private static Robot robot;
     public static final AtomicBoolean isRunning = new AtomicBoolean(false);
     public static final AtomicBoolean isDragging = new AtomicBoolean(false);
     public static volatile Instant lastActivity = Instant.now();
-    private static boolean firstRun = true;
     private static long userNotActiveTimer = 0;
     private static long userNotActiveTime = 0;
     private static long endRandomTime = 0;
@@ -39,43 +39,44 @@ public class AntiAFKApp {
                 @Override
                 public void run() {
                     if (isWithinWorkingHours()) {
-                        firstRun = false;
                         Duration idleTime = Duration.between(lastActivity, Instant.now());
                         // If inactivity time exceeds the threshold start simulating mouse movements
                         if (idleTime.compareTo(IDLE_THRESHOLD) > 0) {
                             if (isRunning.compareAndSet(false, true)) {
-                                System.out.println(LocalDateTime.now() + " Its working hours. Mouse movement enabled.");
+                                System.out.println(getDateTime() + " Its working hours. Mouse movement enabled.");
                                 userNotActiveTimer = System.currentTimeMillis();
                                 endRandomTime = new Random().nextInt(RANDOM_END_DAY_TIME);
                             }
                             simulateMouseMovement();
                         }
                     } else if (isRunning.compareAndSet(true, false)) {
-                        System.out.println(LocalDateTime.now() + " Its not working hours. Mouse movement disabled.");
-                        if (!firstRun) {
-                            long periodInMillis = Duration.between(START_WORK, END_WORK).toMillis();
-                            double percentage = ((double) userNotActiveTime / periodInMillis) * 100;
-                            System.out.println("User was not active for " + userNotActiveTime / 60000 + " minutes. Efficiency: " + (100 - percentage) + "%");
-                            System.out.println(getEfficiencyLabelEn(percentage));
-                            userNotActiveTime = 0;
-                        }
+                        System.out.println(getDateTime() + " Its not working hours. Mouse movement disabled.");
+                        long periodInMillis = Duration.between(START_WORK, END_WORK).toMillis();
+                        double percentage = ((double) userNotActiveTime / periodInMillis) * 100;
+                        System.out.println("User was not active for " + userNotActiveTime / 60000 + " minutes. Efficiency: " + (100 - percentage) + "%");
+                        System.out.println(getEfficiencyLabelEn(percentage));
+                        userNotActiveTime = 0;
                     }
                 }
             }, 0, MOVEMENT_INTERVAL); // Simulate mouse movement every 10 seconds
             if (isWithinWorkingHours())
-                System.out.println(LocalDateTime.now() + " Its working hours. Mouse movement enabled.");
+                System.out.println(getDateTime() + " Its working hours. Mouse movement enabled.");
             else
-                System.out.println(LocalDateTime.now() + " Its not working hours. Mouse movement disabled.");
+                System.out.println(getDateTime() + " Its not working hours. Mouse movement disabled.");
         } catch (Exception e) {
             System.out.println("Error initializing the program: " + e.getMessage());
         }
+    }
+
+    private static String getDateTime() {
+        return ZonedDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 
     public static void resetInactivityTimer() {
         if (!isDragging.get()) {
             lastActivity = Instant.now(); // Reset the activity timer
             if (isRunning.compareAndSet(true, false)) {
-                System.out.println(LocalDateTime.now() + " User activity detected. Mouse movement suspended.");
+                System.out.println(getDateTime() + " User activity detected. Mouse movement suspended.");
                 userNotActiveTime += System.currentTimeMillis() - userNotActiveTimer;
             }
         }
