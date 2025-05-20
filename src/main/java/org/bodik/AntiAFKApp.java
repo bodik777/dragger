@@ -19,6 +19,7 @@ public class AntiAFKApp {
     private static final LocalTime END_WORK = LocalTime.of(18, 0);
     private static Robot robot;
     public static final AtomicBoolean isRunning = new AtomicBoolean(false);
+    public static final AtomicBoolean isWorkingHours = new AtomicBoolean(false);
     public static final AtomicBoolean isDragging = new AtomicBoolean(false);
     public static volatile Instant lastActivity = Instant.now();
     private static long userNotActiveTimer = 0;
@@ -39,6 +40,7 @@ public class AntiAFKApp {
                 @Override
                 public void run() {
                     if (isWithinWorkingHours()) {
+                        isWorkingHours.compareAndSet(false, true);
                         Duration idleTime = Duration.between(lastActivity, Instant.now());
                         // If inactivity time exceeds the threshold start simulating mouse movements
                         if (idleTime.compareTo(IDLE_THRESHOLD) > 0) {
@@ -49,11 +51,11 @@ public class AntiAFKApp {
                             }
                             simulateMouseMovement();
                         }
-                    } else if (isRunning.compareAndSet(true, false)) {
+                    } else if (isWorkingHours.compareAndSet(true, false)) {
                         System.out.println(getDateTime() + " Its not working hours. Mouse movement disabled.");
                         long periodInMillis = Duration.between(START_WORK, END_WORK).toMillis();
                         double percentage = ((double) userNotActiveTime / periodInMillis) * 100;
-                        System.out.println("User was not active for " + userNotActiveTime / 60000 + " minutes. Efficiency: " + (100 - percentage) + "%");
+                        System.out.println("User was not active for " + userNotActiveTime / 60000 + " minutes. Efficiency: " + (100 - percentage) + " %");
                         System.out.println(getEfficiencyLabelEn(percentage));
                         userNotActiveTime = 0;
                     }
@@ -77,7 +79,7 @@ public class AntiAFKApp {
             lastActivity = Instant.now(); // Reset the activity timer
             if (isRunning.compareAndSet(true, false)) {
                 System.out.println(getDateTime() + " User activity detected. Mouse movement suspended.");
-                userNotActiveTime += System.currentTimeMillis() - userNotActiveTimer;
+                userNotActiveTime += (System.currentTimeMillis() - userNotActiveTimer) + IDLE_THRESHOLD.toMillis();
             }
         }
     }
